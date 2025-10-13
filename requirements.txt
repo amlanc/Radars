@@ -3,4 +3,15 @@ torch
 numpy
 jupyterlab
 scipy
+scikit-learn
 matplotlib
+jupytext
+transformers
+datasets
+evaluate
+accelerate
+onnx
+vllm
+openai
+ollama
+claude
