@@ -7,7 +7,7 @@ Micro-Doppler Signatures & Time-Frequency Analysis
 Target: Understand and extract micro-Doppler features for drone detection
 Timeline: Weekend 2 (Oct 12-13)
 
-Prerequisites: Parts 1 & 2 (RDM generation understanding)
+Prerequisites: Parts 1 & 2 (RDM (Range-Doppler Map) generation understanding)
 """
 
 # %%
@@ -33,14 +33,14 @@ plt.rcParams['font.size'] = 10
 You now understand:
 - ✅ Range-Doppler Map (RDM): 2D view of targets (range vs velocity)
 - ✅ Doppler shift from moving targets
-- ✅ MTI filtering to remove stationary clutter
+- ✅ MTI (Moving Target Indicator) filtering to remove stationary clutter
 
 ## The Drone Detection Problem
 
 **Challenge:** In an RDM, a drone and a bird at the same range/velocity look identical!
 - Both show up as a single bright spot
 - Same Doppler frequency (body motion)
-- Similar RCS (radar cross section)
+- Similar RCS (Radar Cross Section)
 
 **How do we tell them apart?**
 
@@ -67,7 +67,7 @@ Imagine you're watching a ceiling fan from across the room:
 ## Micro-Doppler in Radar
 
 **Main Doppler** = Body motion (drone flying at 15 m/s)
-**Micro-Doppler** = Rotating parts (propellers at 3000 RPM)
+**Micro-Doppler** = Rotating parts (propellers at 3000 RPM (Revolutions Per Minute))
 
 **Key signatures:**
 - **Drones:** Periodic blade flashes (4 blades → 4 flashes per rotation)
@@ -79,8 +79,8 @@ Imagine you're watching a ceiling fan from across the room:
 ## Why RDM Can't Show This
 
 Remember from Part 2:
-- RDM shows **one Doppler value per target** (averaged over CPI)
-- CPI = 128 pulses ≈ 12.8 ms (for PRF = 10 kHz)
+- RDM shows **one Doppler value per target** (averaged over CPI (Coherent Processing Interval))
+- CPI = 128 pulses ≈ 12.8 ms (for PRF (Pulse Repetition Frequency) = 10 kHz (kilohertz))
 - Blade rotation period ≈ 20 ms (for 3000 RPM)
 
 **Problem:** The fast blade oscillations are **hidden** in the slow pulse-to-pulse measurements!
@@ -97,13 +97,15 @@ Average over CPI: Doppler ≈ body velocity (micro-Doppler cancels out!)
 ```
 
 **Nyquist consideration:**
-- To see 200 Hz blade flash, need sampling rate > 400 Hz (Nyquist)
+- To see 200 Hz (Hertz, cycles per second) blade flash, need sampling rate > 400 Hz (Nyquist)
 - PRF = 10 kHz gives 10,000 samples/sec → plenty fast enough
 - But RDM averages these samples, losing the time variation!
 
 **Solution:** Look at **time-frequency** evolution using **spectrograms**
 - Don't average over full CPI
-- Use sliding window (Short-Time Fourier Transform)
+- Use sliding window (STFT: Short-Time Fourier Transform)
+  - STFT divides signal into short overlapping segments and applies FFT to each
+  - This reveals how frequency content changes over time
 - Show how Doppler changes instant-by-instant
 - Reveal the oscillating pattern
 
@@ -137,7 +139,7 @@ Consider a single rotor blade rotating in the horizontal plane:
 
 **Given:**
 - Blade length: `r_blade` = 0.15 m (15 cm)
-- Angular velocity: `ω` = 3000 RPM = 314 rad/s
+- Angular velocity: `ω` = 3000 RPM = 314 rad/s (radians per second)
 - Blade angle at time t: `θ(t) = ωt`
 
 **Blade tip velocity** (tangential, in the rotor plane):
@@ -165,9 +167,34 @@ Where:
 
 ## Micro-Doppler Frequency
 
-## Micro-Doppler Frequency
+From the Doppler formula (recall from Part 1): 
 
-From the Doppler formula: `f_d = 2v/λ`
+```
+f_d = 2v/λ
+
+Where:
+- f_d = Doppler frequency shift (Hz)
+- v = radial velocity (m/s)
+- λ = wavelength of radar signal (meters)
+```
+
+**What is wavelength (λ)?**
+The wavelength is related to the radar carrier frequency:
+```
+λ = c / f_c
+
+Where:
+- c = speed of light = 3 × 10⁸ m/s
+- f_c = carrier frequency (Hz)
+
+Example for 10 GHz (Gigahertz) X-band radar:
+λ = 3×10⁸ / 10×10⁹ = 0.03 m = 3 cm
+```
+
+**Why wavelength matters:**
+- Shorter wavelength (higher frequency) → More sensitive to small velocities
+- X-band (3 cm) is good compromise: sensitive but not too affected by weather
+- Micro-Doppler scales with 1/λ, so higher frequencies see stronger signatures
 
 **Micro-Doppler from radial velocity:**
 ```
@@ -266,7 +293,7 @@ def visualize_blade_modulation():
     
     # Plot 1: Blade tip radial velocity
     ax = axes[0]
-    ax.plot(t * 1000, v_radial, 'b-', linewidth=2.5, label='Radial velocity')
+    ax.plot(t * 1000, v_radial, 'b-', linewidth=1, label='Radial velocity')
     ax.axhline(0, color='k', linestyle='--', alpha=0.3)
     ax.fill_between(t * 1000, 0, v_radial, alpha=0.3, color='blue')
     ax.set_xlabel('Time (ms)', fontsize=12)
@@ -283,18 +310,18 @@ def visualize_blade_modulation():
     ax.annotate('Maximum approach\n(blade tip toward radar)', 
                 xy=(t[max_idx]*1000, v_radial[max_idx]),
                 xytext=(t[max_idx]*1000 + 5, v_radial[max_idx] + 15),
-                arrowprops=dict(arrowstyle='->', color='green', lw=2),
+                arrowprops=dict(arrowstyle='->', color='green', lw=1),
                 fontsize=10, color='green', fontweight='bold')
     
     ax.annotate('Maximum recede\n(blade tip away from radar)', 
                 xy=(t[min_idx]*1000, v_radial[min_idx]),
                 xytext=(t[min_idx]*1000 + 5, v_radial[min_idx] - 15),
-                arrowprops=dict(arrowstyle='->', color='red', lw=2),
+                arrowprops=dict(arrowstyle='->', color='red', lw=1),
                 fontsize=10, color='red', fontweight='bold')
     
     # Plot 2: Micro-Doppler frequency
     ax = axes[1]
-    ax.plot(t * 1000, f_micro, 'r-', linewidth=2.5, label='Micro-Doppler frequency')
+    ax.plot(t * 1000, f_micro, 'r-', linewidth=1, label='Micro-Doppler frequency')
     ax.axhline(0, color='k', linestyle='--', alpha=0.3)
     ax.fill_between(t * 1000, 0, f_micro, alpha=0.3, color='red')
     ax.set_xlabel('Time (ms)', fontsize=12)
@@ -348,7 +375,7 @@ We'll build a radar simulator that can:
 3. Analyze micro-Doppler using spectrograms
 
 **Key difference from Part 2:**
-- Part 2: Multiple pulses → 2D FFT → RDM (range-velocity)
+- Part 2: Multiple pulses → 2D FFT (Fast Fourier Transform) → RDM (range-velocity)
 - Part 3: Continuous time series → STFT → Spectrogram (time-frequency)
 """
 
@@ -603,7 +630,7 @@ class MicroDopplerRadar:
         Parameters:
         -----------
         snr_db : float
-            Signal-to-noise ratio in dB
+            SNR (Signal-to-Noise Ratio) in dB (decibels, logarithmic power ratio)
         """
         signal_power = np.mean(np.abs(self.signal)**2)
         noise_power = signal_power / (10**(snr_db/10))
@@ -659,33 +686,122 @@ class MicroDopplerRadar:
         return spectrogram, t, velocity_axis
     
     def plot_spectrogram(self, spectrogram, time_axis, velocity_axis, 
-                        title="Micro-Doppler Spectrogram", db_range=60):
+                        title="Micro-Doppler Spectrogram", db_range=60,
+                        annotate=False, body_velocity=None):
         """
         Plot spectrogram with proper scaling and labels
+        
+        Parameters:
+        -----------
+        spectrogram : 2D array
+            Spectrogram magnitude data
+        time_axis : array
+            Time axis in seconds
+        velocity_axis : array
+            Velocity axis in m/s
+        title : str
+            Plot title
+        db_range : float
+            Dynamic range in dB for display
+        annotate : bool
+            If True, add annotations explaining key features
+        body_velocity : float
+            Body velocity of target in m/s (for annotations)
         """
         # Convert to dB
         spec_db = 20 * np.log10(spectrogram + 1e-10)
         spec_db -= np.max(spec_db)  # Normalize to 0 dB
         
-        plt.figure(figsize=(14, 8))
+        fig, ax = plt.subplots(figsize=(14, 8))
         
         extent = [time_axis[0]*1000, time_axis[-1]*1000,
                  velocity_axis[0], velocity_axis[-1]]
         
-        im = plt.imshow(spec_db, 
+        im = ax.imshow(spec_db, 
                        aspect='auto',
                        extent=extent,
                        cmap='jet',
                        vmin=-db_range, vmax=0,
                        origin='lower',
-                       interpolation='bilinear')
+                       interpolation='bilinear',
+                       zorder=1)
         
-        plt.xlabel('Time (ms)', fontsize=12)
-        plt.ylabel('Doppler Velocity (m/s)', fontsize=12)
-        plt.title(title, fontsize=14, fontweight='bold')
-        plt.colorbar(im, label='Magnitude (dB)')
-        plt.axhline(0, color='white', linestyle='--', alpha=0.5, linewidth=1)
-        plt.grid(True, alpha=0.3, color='white', linewidth=0.5)
+        ax.set_xlabel('Time (ms)', fontsize=12)
+        ax.set_ylabel('Doppler Velocity (m/s)', fontsize=12)
+        ax.set_title(title, fontsize=14, fontweight='bold')
+        cbar = plt.colorbar(im, ax=ax, label='Magnitude (dB)')
+        cbar.ax.set_zorder(1)  # Put colorbar in background
+        ax.axhline(0, color='white', linestyle='--', alpha=0.5, linewidth=1, zorder=3)
+        ax.grid(True, alpha=0.3, color='white', linewidth=0.5, zorder=2)
+        
+        # Add annotations if requested
+        if annotate and body_velocity is not None:
+            # Find approximate modulation envelope from spectrogram
+            # Average over time to get robust estimate
+            velocity_profile = np.mean(spectrogram, axis=1)
+            
+            # Find significant energy region (above 20% of max)
+            threshold = np.max(velocity_profile) * 0.2
+            significant = velocity_profile > threshold
+            significant_velocities = velocity_axis[significant]
+            
+            if len(significant_velocities) > 0:
+                upper_envelope = np.max(significant_velocities)
+                lower_envelope = np.min(significant_velocities)
+                modulation_bandwidth = upper_envelope - lower_envelope
+                
+                # Get DIFFERENT time points for each arrow to avoid crossing
+                t_start = time_axis[0] * 1000
+                t_end = time_axis[-1] * 1000
+                t_upper = t_start + 0.2 * (t_end - t_start)  # 20% along
+                t_mid = t_start + 0.5 * (t_end - t_start)    # 50% along
+                t_lower = t_start + 0.8 * (t_end - t_start)  # 80% along
+                t_right = t_start + 0.95 * (t_end - t_start) # 95% along (rightmost)
+                
+                # Draw clean reference lines on the plot - in background
+                ax.axhline(body_velocity, color='red', linestyle='-', linewidth=1, alpha=0.6, zorder=3)
+                ax.axhline(upper_envelope, color='cyan', linestyle='--', linewidth=1, alpha=0.5, zorder=3)
+                ax.axhline(lower_envelope, color='cyan', linestyle='--', linewidth=1, alpha=0.5, zorder=3)
+                
+                # Annotation 1: Upper envelope - arrow from top right to LEFT side of plot
+                ax.annotate(f'Upper Envelope\n{upper_envelope:.0f} m/s',
+                           xy=(t_upper, upper_envelope),
+                           xytext=(1.12, 0.70),
+                           xycoords='data',
+                           textcoords='axes fraction',
+                           fontsize=10, fontweight='bold', color='blue',
+                           bbox=dict(boxstyle='round,pad=0.4', facecolor='white', 
+                                    edgecolor='blue', linewidth=1, alpha=0.95),
+                           ha='left', va='center',
+                           arrowprops=dict(arrowstyle='->', lw=1, color='blue'),
+                           zorder=10)
+                
+                # Annotation 2: Body Doppler - arrow pointing to red line at rightmost position
+                ax.annotate(f'Body Doppler\nVelocity\n{body_velocity:.0f} m/s',
+                           xy=(t_right, body_velocity),
+                           xytext=(1.12, 0.50),
+                           xycoords='data',
+                           textcoords='axes fraction',
+                           fontsize=11, fontweight='bold', color='darkred',
+                           bbox=dict(boxstyle='round,pad=0.5', facecolor='white', 
+                                    edgecolor='darkred', linewidth=1, alpha=0.95),
+                           ha='left', va='center',
+                           arrowprops=dict(arrowstyle='->', lw=1, color='darkred'),
+                           zorder=10)
+                
+                # Annotation 3: Lower envelope - arrow from bottom right to RIGHT side of plot
+                ax.annotate(f'Lower Envelope\n{lower_envelope:.0f} m/s',
+                           xy=(t_lower, lower_envelope),
+                           xytext=(1.12, 0.30),
+                           xycoords='data',
+                           textcoords='axes fraction',
+                           fontsize=10, fontweight='bold', color='blue',
+                           bbox=dict(boxstyle='round,pad=0.4', facecolor='white', 
+                                    edgecolor='blue', linewidth=1, alpha=0.95),
+                           ha='left', va='center',
+                           arrowprops=dict(arrowstyle='->', lw=1, color='blue'),
+                           zorder=10)
+        
         plt.tight_layout()
         plt.show()
 
@@ -706,6 +822,12 @@ def example_single_drone():
     """
     Simulate a drone with 4 rotors and visualize micro-Doppler
     """
+    # Define parameters
+    body_velocity = 15  # m/s
+    num_blades = 4
+    rpm = 3000
+    rotor_radius = 0.15  # meters
+    
     # Create radar
     radar = MicroDopplerRadar(
         f_c=10e9,           # 10 GHz X-band
@@ -716,11 +838,11 @@ def example_single_drone():
     # Add quadcopter drone
     radar.add_target_with_rotors(
         range_m=1500,        # 1.5 km away
-        velocity_ms=15,      # Moving toward radar at 15 m/s
+        velocity_ms=body_velocity,
         rcs=0.01,            # Small RCS (10 cm² = 0.01 m²)
-        num_rotors=4,        # Quadcopter
-        rotor_radius=0.15,   # 15 cm blades
-        rpm=3000,            # 3000 RPM
+        num_rotors=num_blades,
+        rotor_radius=rotor_radius,
+        rpm=rpm,
         blade_rcs_fraction=0.1  # Blades are 10% of body RCS
     )
     
@@ -736,20 +858,29 @@ def example_single_drone():
         noverlap=200      # Time resolution
     )
     
-    # Plot
+    # Plot with annotations
     radar.plot_spectrogram(spec, t_axis, v_axis,
                           title="Quadcopter Drone - Micro-Doppler Signature",
-                          db_range=50)
+                          db_range=50,
+                          annotate=True,
+                          body_velocity=body_velocity)
+    
+    # Calculate expected values
+    rotation_freq = rpm / 60  # Hz
+    blade_flash_rate = num_blades * rotation_freq  # Hz
     
     # Analysis
     print("\n" + "="*60)
     print("WHAT TO LOOK FOR IN THE SPECTROGRAM:")
     print("="*60)
-    print("✓ Horizontal line at ~15 m/s: Body Doppler (main velocity)")
-    print("✓ Sinusoidal modulation around body Doppler: Blade modulation")
-    print("✓ Modulation bandwidth: ±(blade tip velocity)")
-    print("✓ Periodicity: 4 blade flashes per rotation")
-    print("\nExpected blade flash rate: 4 × 50 Hz = 200 Hz")
+    print(f"✓ Bright red/yellow band centered at ~{body_velocity} m/s: Body Doppler velocity")
+    print("✓ Sinusoidal modulation pattern: Blade micro-Doppler signature")
+    print("✓ Upper/lower envelopes: Blade approaching/receding from radar")
+    print("✓ Modulation bandwidth: Total spread caused by rotating blades")
+    print(f"✓ Periodic pattern: {num_blades} blade flashes per rotation")
+    print(f"\nExpected blade flash rate: {num_blades} × {rotation_freq:.0f} Hz = {blade_flash_rate:.0f} Hz")
+    print("Note: The body velocity is the CENTER of the modulated band,")
+    print("      not a thin horizontal line!")
     print("="*60)
 
 # Run example
@@ -761,21 +892,76 @@ example_single_drone()
 
 **What you're seeing:**
 
-1. **Horizontal streak at +15 m/s:** This is the body Doppler
-   - Constant velocity of the drone moving toward the radar
+1. **Bright red/yellow band centered at +15 m/s:** This is the body Doppler
+   - The drone's constant velocity toward the radar
+   - NOT a thin line - the blade modulation spreads energy above and below this center
    
-2. **Sinusoidal oscillations:** These are the micro-Doppler signatures
-   - Width of oscillation = 2 × (blade tip velocity)
-   - Frequency of oscillation = blade flash rate
+2. **Sinusoidal oscillation pattern:** These are the micro-Doppler signatures
+   - The characteristic "striped" pattern from rotating blades
+   - Upper envelope: When blade tip moves toward radar (maximum positive velocity)
+   - Lower envelope: When blade tip moves away from radar (maximum negative velocity)
    
-3. **Periodic pattern:** 
-   - For 4 blades, you see 4 "flashes" per rotation
-   - Creates characteristic 200 Hz modulation
+3. **Modulation bandwidth:** 
+   **Let's calculate this step-by-step:**
+   
+   Given parameters from the simulation above:
+   - Blade radius: r_blade meters
+   - Angular velocity: ω rad/s (converted from RPM)
+   - Body velocity: v_body m/s
+   
+   Step 1: Calculate blade tip tangential speed
+   - v_tip = r_blade × ω
+   - Example: 0.15 m × 314 rad/s = 47 m/s
+   
+   Step 2: The radial velocity (toward/away from radar) oscillates:
+   - Maximum: +v_tip (blade tip approaching radar)
+   - Minimum: -v_tip (blade tip receding from radar)
+   
+   Step 3: Add to body velocity:
+   - Upper envelope = v_body + v_tip
+   - Lower envelope = v_body - v_tip
+   - **Total bandwidth = 2 × v_tip**
+   
+   **Example with your parameters:**
+   - Upper envelope = 20 + 47 = 67 m/s
+   - Lower envelope = 20 - 47 = -27 m/s
+   - Bandwidth = 67 - (-27) = 94 m/s
+   
+   **Key insight:** Larger blades or faster RPM → larger v_tip → wider bandwidth
+
+4. **Periodic pattern (blade flash rate):**
+   **Let's calculate blade flash frequency:**
+   
+   Given parameters:
+   - Number of blades: N
+   - Rotation rate: RPM
+   
+   Step 1: Convert RPM to rotations per second
+   - Rotation frequency (Hz) = RPM ÷ 60
+   - Example: 3000 RPM ÷ 60 = 50 Hz
+   
+   Step 2: Calculate blade flash rate
+   - Blade flash rate = N × rotation frequency
+   - **Example: 4 blades × 50 Hz = 200 Hz**
+   
+   Step 3: What does this mean in the spectrogram?
+   - The sinusoidal pattern oscillates at this frequency
+   - Period of one oscillation = 1 / blade_flash_rate
+   - Example: 1/200 = 5 ms per cycle
+   
+   **Key insight:** More blades or faster RPM → higher blade flash frequency
+   
+   **For your specific run:** Check the console output above to see your actual values!
 
 **Why this matters:**
 - This signature is UNIQUE to rotating objects
-- Birds don't have this regular, periodic pattern
+- Birds don't have this regular, high-frequency pattern
 - This is what makes drone detection possible!
+
+**Common misconception:**
+You might expect to see a thin horizontal line at the body velocity. In reality,
+the strong blade returns create a modulated BAND. The body velocity is the 
+CENTER of this band, not a visible thin line on its own.
 
 ---
 # 5. Example 2: Drone vs Bird Comparison
@@ -1516,7 +1702,9 @@ On typical CPU:
 ```
 Step 1: Generate RDM (Part 2)
    ↓
-Step 2: CFAR Detection (Part 4)
+Step 2: CFAR (Constant False Alarm Rate) Detection (Part 4)
+   CFAR is an adaptive thresholding technique that automatically detects targets
+   while maintaining a constant false alarm rate in varying noise/clutter
    ↓ (list of detections: range, velocity, magnitude)
 Step 3: For each detection, generate micro-Doppler spectrogram
    ↓
