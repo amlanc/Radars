@@ -1,3 +1,5 @@
+<!-- Copyright © 2025 Amlan Chatterjee. All rights reserved. -->
+
 ---
 # 2. The Range-Doppler Map (RDM): Bringing It All Together
 
@@ -90,9 +92,9 @@ For each range bin (each column):
 ```
 Raw I/Q Data Matrix               After Range-FFT                After Doppler-FFT
 [128 pulses × 256 samples]  →  [128 pulses × 256 range bins]  →  [128 Doppler × 256 range]
-      
+
   Time samples                     Range information              Range-Doppler Map (RDM)
-  per pulse                        per pulse                      
+  per pulse                        per pulse
                                                                   X-axis: Range
                                                                   Y-axis: Velocity
 ```

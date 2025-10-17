@@ -1,3 +1,5 @@
+# Copyright © 2025 Amlan Chatterjee. All rights reserved.
+
 # %% [markdown]
 """
 RADAR FUNDAMENTALS & SIMULATOR - Part 3
@@ -157,7 +159,7 @@ v_radial(t) = r_blade × ω × sin(ωt)
 
 Where:
 - sin(ωt) = +1 when blade moves toward radar
-- sin(ωt) = -1 when blade moves away from radar  
+- sin(ωt) = -1 when blade moves away from radar
 - sin(ωt) = 0 when blade moves perpendicular to radar
 ```
 
@@ -167,7 +169,7 @@ Where:
 
 ## Micro-Doppler Frequency
 
-From the Doppler formula (recall from Part 1): 
+From the Doppler formula (recall from Part 1):
 
 ```
 f_d = 2v/λ
@@ -265,7 +267,7 @@ blade_flash_freq = num_blades × rotation_freq
 def visualize_blade_modulation():
     """
     Show how a single rotating blade creates sinusoidal Doppler modulation
-    
+
     This demonstrates the physics of micro-Doppler before we build the full simulator.
     """
     # Parameters
@@ -273,24 +275,24 @@ def visualize_blade_modulation():
     rpm = 3000
     omega = rpm * 2 * np.pi / 60  # convert to rad/s
     wavelength = 0.03  # 10 GHz X-band
-    
+
     # Time array (show 2 full rotations)
     rotation_period = 2 * np.pi / omega
     t = np.linspace(0, 2 * rotation_period, 1000)
-    
+
     # Blade angle over time
     theta = omega * t
-    
+
     # Radial velocity of blade tip (toward/away from radar)
     # Positive = approaching, Negative = receding
     v_radial = r_blade * omega * np.sin(theta)
-    
+
     # Micro-Doppler frequency from radial velocity
     f_micro = 2 * v_radial / wavelength
-    
+
     # Create figure
     fig, axes = plt.subplots(2, 1, figsize=(14, 10))
-    
+
     # Plot 1: Blade tip radial velocity
     ax = axes[0]
     ax.plot(t * 1000, v_radial, 'b-', linewidth=1, label='Radial velocity')
@@ -301,24 +303,24 @@ def visualize_blade_modulation():
     ax.set_title('Blade Tip Radial Velocity vs Time', fontsize=14, fontweight='bold')
     ax.grid(True, alpha=0.3)
     ax.legend(fontsize=11)
-    
+
     # Add annotations for key points
     max_idx = np.argmax(v_radial)
     min_idx = np.argmin(v_radial)
     zero_idx = len(v_radial) // 4
-    
-    ax.annotate('Maximum approach\n(blade tip toward radar)', 
+
+    ax.annotate('Maximum approach\n(blade tip toward radar)',
                 xy=(t[max_idx]*1000, v_radial[max_idx]),
                 xytext=(t[max_idx]*1000 + 5, v_radial[max_idx] + 15),
                 arrowprops=dict(arrowstyle='->', color='green', lw=1),
                 fontsize=10, color='green', fontweight='bold')
-    
-    ax.annotate('Maximum recede\n(blade tip away from radar)', 
+
+    ax.annotate('Maximum recede\n(blade tip away from radar)',
                 xy=(t[min_idx]*1000, v_radial[min_idx]),
                 xytext=(t[min_idx]*1000 + 5, v_radial[min_idx] - 15),
                 arrowprops=dict(arrowstyle='->', color='red', lw=1),
                 fontsize=10, color='red', fontweight='bold')
-    
+
     # Plot 2: Micro-Doppler frequency
     ax = axes[1]
     ax.plot(t * 1000, f_micro, 'r-', linewidth=1, label='Micro-Doppler frequency')
@@ -329,7 +331,7 @@ def visualize_blade_modulation():
     ax.set_title('Instantaneous Micro-Doppler Frequency', fontsize=14, fontweight='bold')
     ax.grid(True, alpha=0.3)
     ax.legend(fontsize=11)
-    
+
     # Add parameters as text box
     rotation_rate = rpm / 60
     param_text = (f'Parameters:\n'
@@ -340,10 +342,10 @@ def visualize_blade_modulation():
     ax.text(0.02, 0.98, param_text, transform=ax.transAxes,
             bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8),
             verticalalignment='top', fontsize=10, family='monospace')
-    
+
     plt.tight_layout()
     plt.show()
-    
+
     # Print key metrics
     print("\n" + "="*60)
     print("BLADE MODULATION ANALYSIS:")
@@ -383,16 +385,16 @@ We'll build a radar simulator that can:
 class MicroDopplerRadar:
     """
     Radar simulator for micro-Doppler analysis
-    
+
     Simulates continuous radar returns from targets with rotating parts
     Focus: Time-frequency analysis, not range-velocity maps
     """
-    
+
     def __init__(self, f_c=10e9, prf=10e3, observation_time=1.0,
                  sampling_rate=None):
         """
         Initialize micro-Doppler radar simulator
-        
+
         Parameters:
         -----------
         f_c : float
@@ -409,23 +411,23 @@ class MicroDopplerRadar:
         self.prf = prf
         self.pri = 1.0 / prf
         self.observation_time = observation_time
-        
+
         # Sampling rate for continuous simulation
         if sampling_rate is None:
             self.sampling_rate = 2 * prf  # Nyquist
         else:
             self.sampling_rate = sampling_rate
-        
+
         # Time vector
         self.num_samples = int(observation_time * self.sampling_rate)
         self.time_vector = np.arange(self.num_samples) / self.sampling_rate
-        
+
         # Signal storage
         self.signal = np.zeros(self.num_samples, dtype=complex)
-        
+
         # Target list
         self.targets = []
-        
+
         print("\n" + "="*60)
         print("MicroDopplerRadar Initialized")
         print("="*60)
@@ -436,13 +438,13 @@ class MicroDopplerRadar:
         print(f"Sampling rate:        {self.sampling_rate/1e3:.1f} kHz")
         print(f"Total samples:        {self.num_samples:,}")
         print("="*60)
-    
+
     def add_target_with_rotors(self, range_m, velocity_ms, rcs=1.0,
                                num_rotors=4, rotor_radius=0.15, rpm=3000,
                                blade_rcs_fraction=0.1):
         """
         Add a target with rotating blades (e.g., drone)
-        
+
         Parameters:
         -----------
         range_m : float
@@ -472,7 +474,7 @@ class MicroDopplerRadar:
             'type': 'rotor'
         }
         self.targets.append(target)
-        
+
         print(f"\n✓ Rotor target added:")
         print(f"  Range: {range_m} m")
         print(f"  Velocity: {velocity_ms:+.1f} m/s ({'approaching' if velocity_ms > 0 else 'receding' if velocity_ms < 0 else 'stationary'})")
@@ -482,13 +484,13 @@ class MicroDopplerRadar:
         print(f"  RPM: {rpm:,}")
         print(f"  Rotation rate: {rpm/60:.1f} Hz")
         print(f"  Expected blade flash: {num_rotors * rpm/60:.1f} Hz")
-    
+
     def add_target_with_wings(self, range_m, velocity_ms, rcs=1.0,
                              wing_beat_freq=8, wing_length=0.25,
                              irregularity=0.3):
         """
         Add a target with flapping wings (e.g., bird)
-        
+
         Parameters:
         -----------
         range_m : float
@@ -514,7 +516,7 @@ class MicroDopplerRadar:
             'type': 'wing'
         }
         self.targets.append(target)
-        
+
         print(f"\n✓ Wing target added (bird):")
         print(f"  Range: {range_m} m")
         print(f"  Velocity: {velocity_ms:+.1f} m/s ({'approaching' if velocity_ms > 0 else 'receding' if velocity_ms < 0 else 'hovering'})")
@@ -522,14 +524,14 @@ class MicroDopplerRadar:
         print(f"  Wing beat freq: {wing_beat_freq:.1f} Hz")
         print(f"  Wing length: {wing_length*100:.1f} cm")
         print(f"  Irregularity: {irregularity:.1%}")
-    
+
     def generate_signal(self):
         """
         Generate radar return signal with micro-Doppler modulation
         """
         # Reset signal
         self.signal = np.zeros(self.num_samples, dtype=complex)
-        
+
         for target in self.targets:
             if target['type'] == 'rotor':
                 signal_component = self._generate_rotor_signal(target)
@@ -537,11 +539,11 @@ class MicroDopplerRadar:
                 signal_component = self._generate_wing_signal(target)
             else:
                 signal_component = self._generate_simple_signal(target)
-            
+
             self.signal += signal_component
-        
+
         return self.signal
-    
+
     def _generate_rotor_signal(self, target):
         """
         Generate signal from target with rotating blades
@@ -549,40 +551,40 @@ class MicroDopplerRadar:
         # Body Doppler (constant velocity)
         body_doppler = 2 * target['velocity'] / self.wavelength
         body_phase = 2 * np.pi * body_doppler * self.time_vector
-        
+
         # Body return (main signal)
         body_signal = np.sqrt(target['rcs']) * np.exp(1j * body_phase)
-        
+
         # Blade micro-Doppler (time-varying)
         omega = target['omega']
         r_blade = target['rotor_radius']
         num_blades = target['num_rotors']
-        
+
         blade_signal = np.zeros(self.num_samples, dtype=complex)
-        
+
         # Each blade contributes
         for blade_idx in range(num_blades):
             # Phase offset for this blade
             blade_offset = blade_idx * (2 * np.pi / num_blades)
-            
+
             # Blade angle over time
             theta = omega * self.time_vector + blade_offset
-            
+
             # Radial velocity component
             v_blade = r_blade * omega * np.sin(theta)
-            
+
             # Micro-Doppler frequency
             f_micro = 2 * v_blade / self.wavelength
-            
+
             # Phase accumulation
             phase_micro = 2 * np.pi * np.cumsum(f_micro) / self.sampling_rate
-            
+
             # Blade return (modulated)
             blade_signal += np.sqrt(target['blade_rcs']) * np.exp(1j * (body_phase + phase_micro))
-        
+
         # Total signal
         return body_signal + blade_signal
-    
+
     def _generate_wing_signal(self, target):
         """
         Generate signal from target with flapping wings (bird)
@@ -590,31 +592,31 @@ class MicroDopplerRadar:
         # Body Doppler
         body_doppler = 2 * target['velocity'] / self.wavelength
         body_phase = 2 * np.pi * body_doppler * self.time_vector
-        
+
         # Body return
         body_signal = np.sqrt(target['rcs']) * np.exp(1j * body_phase)
-        
+
         # Wing modulation (irregular)
         wing_freq = target['wing_beat_freq']
         wing_length = target['wing_length']
         irregularity = target['irregularity']
-        
+
         # Add irregularity to wing beat
         phase_noise = irregularity * np.cumsum(np.random.randn(self.num_samples)) / self.sampling_rate
         wing_angle = 2 * np.pi * wing_freq * self.time_vector + phase_noise
-        
+
         # Wing velocity (non-sinusoidal, more realistic)
         v_wing = wing_length * wing_freq * np.sin(wing_angle) * (1 + 0.5 * np.cos(2 * wing_angle))
-        
+
         # Micro-Doppler from wings
         f_micro = 2 * v_wing / self.wavelength
         phase_micro = 2 * np.pi * np.cumsum(f_micro) / self.sampling_rate
-        
+
         # Wing contribution (smaller than body)
         wing_signal = 0.3 * np.sqrt(target['rcs']) * np.exp(1j * (body_phase + phase_micro))
-        
+
         return body_signal + wing_signal
-    
+
     def _generate_simple_signal(self, target):
         """
         Generate simple signal (no micro-Doppler)
@@ -622,11 +624,11 @@ class MicroDopplerRadar:
         doppler = 2 * target['velocity'] / self.wavelength
         phase = 2 * np.pi * doppler * self.time_vector
         return np.sqrt(target['rcs']) * np.exp(1j * phase)
-    
+
     def add_noise(self, snr_db=20):
         """
         Add complex white Gaussian noise to the signal
-        
+
         Parameters:
         -----------
         snr_db : float
@@ -634,16 +636,16 @@ class MicroDopplerRadar:
         """
         signal_power = np.mean(np.abs(self.signal)**2)
         noise_power = signal_power / (10**(snr_db/10))
-        noise = np.sqrt(noise_power/2) * (np.random.randn(self.num_samples) + 
+        noise = np.sqrt(noise_power/2) * (np.random.randn(self.num_samples) +
                                           1j*np.random.randn(self.num_samples))
         self.signal += noise
-        
+
         print(f"\n✓ Noise added: SNR = {snr_db} dB")
-    
+
     def generate_spectrogram(self, nperseg=256, noverlap=None, window='hann'):
         """
         Generate spectrogram using Short-Time Fourier Transform (STFT)
-        
+
         Parameters:
         -----------
         nperseg : int
@@ -652,7 +654,7 @@ class MicroDopplerRadar:
             Number of overlapping samples (affects time resolution)
         window : str
             Window function ('hann', 'hamming', 'blackman')
-        
+
         Returns:
         --------
         spectrogram : 2D array
@@ -664,33 +666,33 @@ class MicroDopplerRadar:
         """
         if noverlap is None:
             noverlap = nperseg // 2
-        
+
         # Compute STFT
-        f, t, Zxx = signal.stft(self.signal, 
+        f, t, Zxx = signal.stft(self.signal,
                                 fs=self.sampling_rate,
                                 window=window,
                                 nperseg=nperseg,
                                 noverlap=noverlap,
                                 return_onesided=False)
-        
+
         # Shift zero frequency to center
         f = fftshift(f)
         Zxx = fftshift(Zxx, axes=0)
-        
+
         # Convert to Doppler velocity
         velocity_axis = f * self.wavelength / 2
-        
+
         # Magnitude spectrogram
         spectrogram = np.abs(Zxx)
-        
+
         return spectrogram, t, velocity_axis
-    
-    def plot_spectrogram(self, spectrogram, time_axis, velocity_axis, 
+
+    def plot_spectrogram(self, spectrogram, time_axis, velocity_axis,
                         title="Micro-Doppler Spectrogram", db_range=60,
                         annotate=False, body_velocity=None):
         """
         Plot spectrogram with proper scaling and labels
-        
+
         Parameters:
         -----------
         spectrogram : 2D array
@@ -711,13 +713,13 @@ class MicroDopplerRadar:
         # Convert to dB
         spec_db = 20 * np.log10(spectrogram + 1e-10)
         spec_db -= np.max(spec_db)  # Normalize to 0 dB
-        
+
         fig, ax = plt.subplots(figsize=(14, 8))
-        
+
         extent = [time_axis[0]*1000, time_axis[-1]*1000,
                  velocity_axis[0], velocity_axis[-1]]
-        
-        im = ax.imshow(spec_db, 
+
+        im = ax.imshow(spec_db,
                        aspect='auto',
                        extent=extent,
                        cmap='jet',
@@ -725,7 +727,7 @@ class MicroDopplerRadar:
                        origin='lower',
                        interpolation='bilinear',
                        zorder=1)
-        
+
         ax.set_xlabel('Time (ms)', fontsize=12)
         ax.set_ylabel('Doppler Velocity (m/s)', fontsize=12)
         ax.set_title(title, fontsize=14, fontweight='bold')
@@ -733,23 +735,23 @@ class MicroDopplerRadar:
         cbar.ax.set_zorder(1)  # Put colorbar in background
         ax.axhline(0, color='white', linestyle='--', alpha=0.5, linewidth=1, zorder=3)
         ax.grid(True, alpha=0.3, color='white', linewidth=0.5, zorder=2)
-        
+
         # Add annotations if requested
         if annotate and body_velocity is not None:
             # Find approximate modulation envelope from spectrogram
             # Average over time to get robust estimate
             velocity_profile = np.mean(spectrogram, axis=1)
-            
+
             # Find significant energy region (above 20% of max)
             threshold = np.max(velocity_profile) * 0.2
             significant = velocity_profile > threshold
             significant_velocities = velocity_axis[significant]
-            
+
             if len(significant_velocities) > 0:
                 upper_envelope = np.max(significant_velocities)
                 lower_envelope = np.min(significant_velocities)
                 modulation_bandwidth = upper_envelope - lower_envelope
-                
+
                 # Get DIFFERENT time points for each arrow to avoid crossing
                 t_start = time_axis[0] * 1000
                 t_end = time_axis[-1] * 1000
@@ -757,12 +759,12 @@ class MicroDopplerRadar:
                 t_mid = t_start + 0.5 * (t_end - t_start)    # 50% along
                 t_lower = t_start + 0.8 * (t_end - t_start)  # 80% along
                 t_right = t_start + 0.95 * (t_end - t_start) # 95% along (rightmost)
-                
+
                 # Draw clean reference lines on the plot - in background
                 ax.axhline(body_velocity, color='red', linestyle='-', linewidth=1, alpha=0.6, zorder=3)
                 ax.axhline(upper_envelope, color='cyan', linestyle='--', linewidth=1, alpha=0.5, zorder=3)
                 ax.axhline(lower_envelope, color='cyan', linestyle='--', linewidth=1, alpha=0.5, zorder=3)
-                
+
                 # Annotation 1: Upper envelope - arrow from top right to LEFT side of plot
                 ax.annotate(f'Upper Envelope\n{upper_envelope:.0f} m/s',
                            xy=(t_upper, upper_envelope),
@@ -770,12 +772,12 @@ class MicroDopplerRadar:
                            xycoords='data',
                            textcoords='axes fraction',
                            fontsize=10, fontweight='bold', color='blue',
-                           bbox=dict(boxstyle='round,pad=0.4', facecolor='white', 
+                           bbox=dict(boxstyle='round,pad=0.4', facecolor='white',
                                     edgecolor='blue', linewidth=1, alpha=0.95),
                            ha='left', va='center',
                            arrowprops=dict(arrowstyle='->', lw=1, color='blue'),
                            zorder=10)
-                
+
                 # Annotation 2: Body Doppler - arrow pointing to red line at rightmost position
                 ax.annotate(f'Body Doppler\nVelocity\n{body_velocity:.0f} m/s',
                            xy=(t_right, body_velocity),
@@ -783,12 +785,12 @@ class MicroDopplerRadar:
                            xycoords='data',
                            textcoords='axes fraction',
                            fontsize=11, fontweight='bold', color='darkred',
-                           bbox=dict(boxstyle='round,pad=0.5', facecolor='white', 
+                           bbox=dict(boxstyle='round,pad=0.5', facecolor='white',
                                     edgecolor='darkred', linewidth=1, alpha=0.95),
                            ha='left', va='center',
                            arrowprops=dict(arrowstyle='->', lw=1, color='darkred'),
                            zorder=10)
-                
+
                 # Annotation 3: Lower envelope - arrow from bottom right to RIGHT side of plot
                 ax.annotate(f'Lower Envelope\n{lower_envelope:.0f} m/s',
                            xy=(t_lower, lower_envelope),
@@ -796,12 +798,12 @@ class MicroDopplerRadar:
                            xycoords='data',
                            textcoords='axes fraction',
                            fontsize=10, fontweight='bold', color='blue',
-                           bbox=dict(boxstyle='round,pad=0.4', facecolor='white', 
+                           bbox=dict(boxstyle='round,pad=0.4', facecolor='white',
                                     edgecolor='blue', linewidth=1, alpha=0.95),
                            ha='left', va='center',
                            arrowprops=dict(arrowstyle='->', lw=1, color='blue'),
                            zorder=10)
-        
+
         plt.tight_layout()
         plt.show()
 
@@ -827,14 +829,14 @@ def example_single_drone():
     num_blades = 4
     rpm = 3000
     rotor_radius = 0.15  # meters
-    
+
     # Create radar
     radar = MicroDopplerRadar(
         f_c=10e9,           # 10 GHz X-band
         prf=10e3,           # 10 kHz PRF
         observation_time=0.5  # 500 ms observation
     )
-    
+
     # Add quadcopter drone
     radar.add_target_with_rotors(
         range_m=1500,        # 1.5 km away
@@ -845,30 +847,30 @@ def example_single_drone():
         rpm=rpm,
         blade_rcs_fraction=0.1  # Blades are 10% of body RCS
     )
-    
+
     # Add noise
     radar.add_noise(snr_db=15)
-    
+
     # Generate signal
     radar.generate_signal()
-    
+
     # Generate spectrogram
     spec, t_axis, v_axis = radar.generate_spectrogram(
         nperseg=256,      # Frequency resolution
         noverlap=200      # Time resolution
     )
-    
+
     # Plot with annotations
     radar.plot_spectrogram(spec, t_axis, v_axis,
                           title="Quadcopter Drone - Micro-Doppler Signature",
                           db_range=50,
                           annotate=True,
                           body_velocity=body_velocity)
-    
+
     # Calculate expected values
     rotation_freq = rpm / 60  # Hz
     blade_flash_rate = num_blades * rotation_freq  # Hz
-    
+
     # Analysis
     print("\n" + "="*60)
     print("WHAT TO LOOK FOR IN THE SPECTROGRAM:")
@@ -895,62 +897,62 @@ example_single_drone()
 1. **Bright red/yellow band centered at +15 m/s:** This is the body Doppler
    - The drone's constant velocity toward the radar
    - NOT a thin line - the blade modulation spreads energy above and below this center
-   
+
 2. **Sinusoidal oscillation pattern:** These are the micro-Doppler signatures
    - The characteristic "striped" pattern from rotating blades
    - Upper envelope: When blade tip moves toward radar (maximum positive velocity)
    - Lower envelope: When blade tip moves away from radar (maximum negative velocity)
-   
-3. **Modulation bandwidth:** 
+
+3. **Modulation bandwidth:**
    **Let's calculate this step-by-step:**
-   
+
    Given parameters from the simulation above:
    - Blade radius: r_blade meters
    - Angular velocity: ω rad/s (converted from RPM)
    - Body velocity: v_body m/s
-   
+
    Step 1: Calculate blade tip tangential speed
    - v_tip = r_blade × ω
    - Example: 0.15 m × 314 rad/s = 47 m/s
-   
+
    Step 2: The radial velocity (toward/away from radar) oscillates:
    - Maximum: +v_tip (blade tip approaching radar)
    - Minimum: -v_tip (blade tip receding from radar)
-   
+
    Step 3: Add to body velocity:
    - Upper envelope = v_body + v_tip
    - Lower envelope = v_body - v_tip
    - **Total bandwidth = 2 × v_tip**
-   
+
    **Example with your parameters:**
    - Upper envelope = 20 + 47 = 67 m/s
    - Lower envelope = 20 - 47 = -27 m/s
    - Bandwidth = 67 - (-27) = 94 m/s
-   
+
    **Key insight:** Larger blades or faster RPM → larger v_tip → wider bandwidth
 
 4. **Periodic pattern (blade flash rate):**
    **Let's calculate blade flash frequency:**
-   
+
    Given parameters:
    - Number of blades: N
    - Rotation rate: RPM
-   
+
    Step 1: Convert RPM to rotations per second
    - Rotation frequency (Hz) = RPM ÷ 60
    - Example: 3000 RPM ÷ 60 = 50 Hz
-   
+
    Step 2: Calculate blade flash rate
    - Blade flash rate = N × rotation frequency
    - **Example: 4 blades × 50 Hz = 200 Hz**
-   
+
    Step 3: What does this mean in the spectrogram?
    - The sinusoidal pattern oscillates at this frequency
    - Period of one oscillation = 1 / blade_flash_rate
    - Example: 1/200 = 5 ms per cycle
-   
+
    **Key insight:** More blades or faster RPM → higher blade flash frequency
-   
+
    **For your specific run:** Check the console output above to see your actual values!
 
 **Why this matters:**
@@ -960,7 +962,7 @@ example_single_drone()
 
 **Common misconception:**
 You might expect to see a thin horizontal line at the body velocity. In reality,
-the strong blade returns create a modulated BAND. The body velocity is the 
+the strong blade returns create a modulated BAND. The body velocity is the
 CENTER of this band, not a visible thin line on its own.
 
 ---
@@ -978,13 +980,13 @@ def example_drone_vs_bird():
     print("\n" + "="*60)
     print("SCENARIO 1: QUADCOPTER DRONE")
     print("="*60)
-    
+
     radar_drone = MicroDopplerRadar(
         f_c=10e9,
         prf=10e3,
         observation_time=0.5
     )
-    
+
     radar_drone.add_target_with_rotors(
         range_m=1500,
         velocity_ms=15,
@@ -994,25 +996,25 @@ def example_drone_vs_bird():
         rpm=3000,
         blade_rcs_fraction=0.15
     )
-    
+
     radar_drone.add_noise(snr_db=12)
     radar_drone.generate_signal()
-    
+
     spec_drone, t_drone, v_drone = radar_drone.generate_spectrogram(
         nperseg=256, noverlap=200
     )
-    
+
     # Scenario 2: Bird
     print("\n" + "="*60)
     print("SCENARIO 2: BIRD")
     print("="*60)
-    
+
     radar_bird = MicroDopplerRadar(
         f_c=10e9,
         prf=10e3,
         observation_time=0.5
     )
-    
+
     radar_bird.add_target_with_wings(
         range_m=800,
         velocity_ms=8,
@@ -1021,24 +1023,24 @@ def example_drone_vs_bird():
         wing_length=0.25,    # 25 cm wings
         irregularity=0.4     # Irregular wing motion
     )
-    
+
     radar_bird.add_noise(snr_db=12)
     radar_bird.generate_signal()
-    
+
     spec_bird, t_bird, v_bird = radar_bird.generate_spectrogram(
         nperseg=256, noverlap=200
     )
-    
+
     # Side-by-side comparison
     fig, axes = plt.subplots(1, 2, figsize=(18, 7))
-    
+
     # Drone spectrogram
     spec_drone_db = 20 * np.log10(spec_drone + 1e-10)
     spec_drone_db -= np.max(spec_drone_db)
-    
+
     extent_drone = [t_drone[0]*1000, t_drone[-1]*1000,
                    v_drone[0], v_drone[-1]]
-    
+
     im1 = axes[0].imshow(spec_drone_db,
                         aspect='auto',
                         extent=extent_drone,
@@ -1046,28 +1048,28 @@ def example_drone_vs_bird():
                         vmin=-50, vmax=0,
                         origin='lower',
                         interpolation='bilinear')
-    
+
     axes[0].set_xlabel('Time (ms)', fontsize=12)
     axes[0].set_ylabel('Doppler Velocity (m/s)', fontsize=12)
-    axes[0].set_title('DRONE: Regular, Periodic Blade Flashes', 
+    axes[0].set_title('DRONE: Regular, Periodic Blade Flashes',
                      fontsize=13, fontweight='bold', color='darkgreen')
     axes[0].axhline(0, color='white', linestyle='--', alpha=0.5)
     axes[0].grid(True, alpha=0.3, color='white')
     plt.colorbar(im1, ax=axes[0], label='dB')
-    
+
     # Add annotation
     axes[0].text(0.05, 0.95, 'CHARACTERISTIC:\n• Periodic\n• 4 flashes/cycle\n• ~200 Hz rate',
                 transform=axes[0].transAxes,
                 bbox=dict(boxstyle='round', facecolor='yellow', alpha=0.7),
                 verticalalignment='top', fontsize=10, fontweight='bold')
-    
+
     # Bird spectrogram
     spec_bird_db = 20 * np.log10(spec_bird + 1e-10)
     spec_bird_db -= np.max(spec_bird_db)
-    
+
     extent_bird = [t_bird[0]*1000, t_bird[-1]*1000,
                   v_bird[0], v_bird[-1]]
-    
+
     im2 = axes[1].imshow(spec_bird_db,
                         aspect='auto',
                         extent=extent_bird,
@@ -1075,7 +1077,7 @@ def example_drone_vs_bird():
                         vmin=-50, vmax=0,
                         origin='lower',
                         interpolation='bilinear')
-    
+
     axes[1].set_xlabel('Time (ms)', fontsize=12)
     axes[1].set_ylabel('Doppler Velocity (m/s)', fontsize=12)
     axes[1].set_title('BIRD: Irregular Wing Beats',
@@ -1083,16 +1085,16 @@ def example_drone_vs_bird():
     axes[1].axhline(0, color='white', linestyle='--', alpha=0.5)
     axes[1].grid(True, alpha=0.3, color='white')
     plt.colorbar(im2, ax=axes[1], label='dB')
-    
+
     # Add annotation
     axes[1].text(0.05, 0.95, 'CHARACTERISTIC:\n• Irregular\n• Variable amplitude\n• ~8-16 Hz rate',
                 transform=axes[1].transAxes,
                 bbox=dict(boxstyle='round', facecolor='lightblue', alpha=0.7),
                 verticalalignment='top', fontsize=10, fontweight='bold')
-    
+
     plt.tight_layout()
     plt.show()
-    
+
     print("\n" + "="*60)
     print("KEY DIFFERENCES:")
     print("="*60)
@@ -1135,43 +1137,43 @@ These features can feed into:
 def extract_micro_doppler_features(radar, spectrogram, time_axis, velocity_axis):
     """
     Extract quantitative features from micro-Doppler spectrogram
-    
+
     Returns:
     --------
     features : dict
         Dictionary of extracted features
     """
     features = {}
-    
+
     # 1. Find dominant velocity (body Doppler)
     velocity_profile = np.sum(spectrogram, axis=1)
     dominant_velocity_idx = np.argmax(velocity_profile)
     features['body_velocity'] = velocity_axis[dominant_velocity_idx]
-    
+
     # 2. Extract velocity centroid over time (micro-Doppler track)
     velocity_centroid = np.zeros(len(time_axis))
     for t_idx in range(len(time_axis)):
         weights = spectrogram[:, t_idx]
         if np.sum(weights) > 0:
             velocity_centroid[t_idx] = np.sum(velocity_axis * weights) / np.sum(weights)
-    
+
     # 3. Modulation depth (peak-to-peak)
     modulation = velocity_centroid - features['body_velocity']
     features['modulation_depth'] = np.max(modulation) - np.min(modulation)
-    
+
     # 4. Blade flash frequency (FFT of modulation)
     # Remove mean
     modulation_ac = modulation - np.mean(modulation)
-    
+
     # FFT to find periodicity
     fft_mod = np.fft.fft(modulation_ac)
     freq_mod = np.fft.fftfreq(len(modulation_ac), d=np.mean(np.diff(time_axis)))
-    
+
     # Positive frequencies only
     pos_freq_idx = freq_mod > 0
     fft_mod_pos = np.abs(fft_mod[pos_freq_idx])
     freq_mod_pos = freq_mod[pos_freq_idx]
-    
+
     # Find dominant frequency (blade flash rate)
     # Ignore very low frequencies (< 5 Hz)
     valid_freq_idx = freq_mod_pos > 5
@@ -1180,17 +1182,17 @@ def extract_micro_doppler_features(radar, spectrogram, time_axis, velocity_axis)
         features['blade_flash_freq'] = freq_mod_pos[valid_freq_idx][peak_idx]
     else:
         features['blade_flash_freq'] = 0
-    
+
     # 5. Periodicity measure (ratio of peak to mean in FFT)
     if len(fft_mod_pos[valid_freq_idx]) > 0:
-        features['periodicity_ratio'] = (np.max(fft_mod_pos[valid_freq_idx]) / 
+        features['periodicity_ratio'] = (np.max(fft_mod_pos[valid_freq_idx]) /
                                         np.mean(fft_mod_pos[valid_freq_idx]))
     else:
         features['periodicity_ratio'] = 1.0
-    
+
     # 6. Spectral bandwidth (std of velocity distribution)
     features['spectral_bandwidth'] = np.std(velocity_centroid)
-    
+
     return features
 
 # %%
@@ -1201,7 +1203,7 @@ def demonstrate_feature_extraction():
     print("\n" + "="*60)
     print("FEATURE EXTRACTION DEMONSTRATION")
     print("="*60)
-    
+
     # Drone features
     radar_drone = MicroDopplerRadar(f_c=10e9, prf=10e3, observation_time=1.0)
     radar_drone.add_target_with_rotors(
@@ -1211,9 +1213,9 @@ def demonstrate_feature_extraction():
     radar_drone.add_noise(snr_db=15)
     radar_drone.generate_signal()
     spec_drone, t_drone, v_drone = radar_drone.generate_spectrogram(nperseg=256, noverlap=200)
-    
+
     features_drone = extract_micro_doppler_features(radar_drone, spec_drone, t_drone, v_drone)
-    
+
     # Bird features
     radar_bird = MicroDopplerRadar(f_c=10e9, prf=10e3, observation_time=1.0)
     radar_bird.add_target_with_wings(
@@ -1223,20 +1225,20 @@ def demonstrate_feature_extraction():
     radar_bird.add_noise(snr_db=15)
     radar_bird.generate_signal()
     spec_bird, t_bird, v_bird = radar_bird.generate_spectrogram(nperseg=256, noverlap=200)
-    
+
     features_bird = extract_micro_doppler_features(radar_bird, spec_bird, t_bird, v_bird)
-    
+
     # Display comparison
     print("\nDRONE FEATURES:")
     print("-" * 60)
     for key, value in features_drone.items():
         print(f"  {key:25s}: {value:8.2f}")
-    
+
     print("\nBIRD FEATURES:")
     print("-" * 60)
     for key, value in features_bird.items():
         print(f"  {key:25s}: {value:8.2f}")
-    
+
     print("\n" + "="*60)
     print("CLASSIFICATION INSIGHTS:")
     print("="*60)
@@ -1265,13 +1267,13 @@ def example_multiple_targets():
     print("\n" + "="*60)
     print("COMPLEX SCENARIO: MULTIPLE TARGETS")
     print("="*60)
-    
+
     radar = MicroDopplerRadar(
         f_c=10e9,
         prf=10e3,
         observation_time=0.8
     )
-    
+
     # Target 1: Drone
     radar.add_target_with_rotors(
         range_m=1500,
@@ -1281,7 +1283,7 @@ def example_multiple_targets():
         rotor_radius=0.15,
         rpm=3000
     )
-    
+
     # Target 2: Bird
     radar.add_target_with_wings(
         range_m=800,
@@ -1291,7 +1293,7 @@ def example_multiple_targets():
         wing_length=0.20,
         irregularity=0.3
     )
-    
+
     # Target 3: Another drone (different RPM)
     radar.add_target_with_rotors(
         range_m=2000,
@@ -1301,16 +1303,16 @@ def example_multiple_targets():
         rotor_radius=0.12,
         rpm=4000  # Faster rotors
     )
-    
+
     radar.add_noise(snr_db=12)
     radar.generate_signal()
-    
+
     spec, t_axis, v_axis = radar.generate_spectrogram(nperseg=256, noverlap=220)
-    
+
     radar.plot_spectrogram(spec, t_axis, v_axis,
                           title="Multiple Targets: 2 Drones + 1 Bird",
                           db_range=50)
-    
+
     print("\n" + "="*60)
     print("WHAT YOU'RE SEEING:")
     print("="*60)
@@ -1488,52 +1490,52 @@ def compare_stft_parameters():
     )
     radar.add_noise(snr_db=15)
     radar.generate_signal()
-    
+
     # Different window lengths
     window_sizes = [128, 256, 512]
-    
+
     fig, axes = plt.subplots(1, 3, figsize=(18, 5))
-    
+
     for idx, nperseg in enumerate(window_sizes):
         spec, t_axis, v_axis = radar.generate_spectrogram(
             nperseg=nperseg,
             noverlap=int(nperseg * 0.75)
         )
-        
+
         spec_db = 20 * np.log10(spec + 1e-10)
         spec_db -= np.max(spec_db)
-        
+
         extent = [t_axis[0]*1000, t_axis[-1]*1000, v_axis[0], v_axis[-1]]
-        
+
         im = axes[idx].imshow(spec_db,
                              aspect='auto',
                              extent=extent,
                              cmap='jet',
                              vmin=-50, vmax=0,
                              origin='lower')
-        
+
         axes[idx].set_xlabel('Time (ms)')
         axes[idx].set_ylabel('Velocity (m/s)')
         axes[idx].set_title(f'Window Length = {nperseg}', fontweight='bold')
         axes[idx].axhline(0, color='white', linestyle='--', alpha=0.5)
         axes[idx].grid(True, alpha=0.3, color='white')
         plt.colorbar(im, ax=axes[idx], label='dB')
-        
+
         # Compute resolutions
         freq_res = radar.sampling_rate / nperseg
         time_res = nperseg / radar.sampling_rate * 1000  # ms
-        
-        axes[idx].text(0.05, 0.05, 
+
+        axes[idx].text(0.05, 0.05,
                       f'Freq res: {freq_res:.1f} Hz\nTime res: {time_res:.1f} ms',
                       transform=axes[idx].transAxes,
                       bbox=dict(boxstyle='round', facecolor='white', alpha=0.8),
                       verticalalignment='bottom', fontsize=9)
-    
-    plt.suptitle('Effect of Window Length on Spectrogram Quality', 
+
+    plt.suptitle('Effect of Window Length on Spectrogram Quality',
                 fontsize=14, fontweight='bold', y=1.02)
     plt.tight_layout()
     plt.show()
-    
+
     print("\n" + "="*60)
     print("WINDOW LENGTH TRADE-OFFS:")
     print("="*60)
@@ -1644,7 +1646,7 @@ blade_flash = 200-333 Hz
 **For large drones (octocopters):**
 ```python
 rpm = 2000-3000
-blade_flash = 133-200 Hz  
+blade_flash = 133-200 Hz
 → Need Δf < 30 Hz
 → nperseg = 512-1024
 ```
@@ -1674,7 +1676,7 @@ At 20 kHz sampling: nperseg ≥ 20,000 × 0.015 = 300 samples
 ```
 Spectrogram size = (freq_bins × time_bins) × 8 bytes (complex64)
 
-Example: 
+Example:
 - freq_bins = 256
 - time_bins = 200
 - Size = 256 × 200 × 8 = 409,600 bytes ≈ 400 KB per target
@@ -1853,7 +1855,7 @@ if error > 0.1:
 # - High blade flash frequency (>100 Hz)
 # - Consistent modulation depth
 
-# Bird characteristics:  
+# Bird characteristics:
 # - Irregular periodicity (low periodicity_ratio)
 # - Low wing beat frequency (<20 Hz)
 # - Variable modulation depth
@@ -2083,7 +2085,7 @@ A complete micro-Doppler analysis toolkit:
 You now understand micro-Doppler signatures! In **Part 4**, we'll cover:
 
 1. **CFAR Detection** - Automatically detect targets in RDM/spectrograms
-2. **Classical CFAR** - CA-CFAR, OS-CFAR algorithms  
+2. **Classical CFAR** - CA-CFAR, OS-CFAR algorithms
 3. **Neural CFAR** - Learned detection using CNNs
 4. **Performance Analysis** - Probability of detection vs false alarm curves
 5. **Threshold Optimization** - Balancing sensitivity and false alarms
@@ -2114,7 +2116,7 @@ notebook_file = 'part3_micro_doppler.py'
 if os.path.exists(notebook_file):
     size_bytes = os.path.getsize(notebook_file)
     size_kb = size_bytes / 1024
-    
+
     print("\n" + "="*60)
     print(f"Notebook size: {size_kb:.1f} KB ({size_bytes:,} bytes)")
     if size_kb > 900:

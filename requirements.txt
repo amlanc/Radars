@@ -1,3 +1,5 @@
+# Copyright © 2025 Amlan Chatterjee. All rights reserved.
+
 mlx
 torch
 numpy
